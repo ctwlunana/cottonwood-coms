@@ -16,7 +16,7 @@ export interface ChannelAdapter {
   send(msg: OutMessage): Promise<SendResult>;
 }
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: ReturnType<typeof nodemailer.createTransport> | null = null;
 
 export const emailAdapter: ChannelAdapter = {
   name: "email",

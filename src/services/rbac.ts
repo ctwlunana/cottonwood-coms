@@ -122,3 +122,9 @@ export async function setUserRoles(tx: Tx, actor: Actor, userId: string, roleIds
     before: { roles: current.map((c) => c.slug) }, after: { roles: after.map((a) => a.slug) },
   });
 }
+
+/** Role ids that carry financial/approval permissions (UI marks them; service enforces). */
+export async function financialRoleIds(tx: Tx): Promise<Set<string>> {
+  const r = await tx.selectDistinct({ id: rolePermissions.roleId }).from(rolePermissions).where(inArray(rolePermissions.permissionCode, FINANCIAL_PERMISSIONS));
+  return new Set(r.map((x) => x.id));
+}

@@ -25,7 +25,7 @@ export const employeeInput = z.object({
   departmentId: z.string().uuid("Departemen wajib dipilih"),
 });
 
-export type EmployeeFilters = { q?: string; departmentId?: string; roleId?: string; status?: "active" | "inactive" | "all"; page?: number };
+export type EmployeeFilters = { q?: string; departmentId?: string; roleId?: string; status?: "active" | "inactive" | "all"; pendingReset?: boolean; page?: number };
 export const PAGE_SIZE = 25;
 
 function visibilityFilter(actor: Actor): SQL | undefined {
@@ -45,6 +45,7 @@ export async function listEmployees(tx: Tx, actor: Actor, f: EmployeeFilters = {
   }
   if (f.departmentId) conds.push(eq(users.departmentId, f.departmentId));
   if (f.status !== "all") conds.push(eq(users.isActive, f.status !== "inactive"));
+  if (f.pendingReset) conds.push(sql`exists (select 1 from password_reset_requests r where r.user_id = "users"."id" and r.handled_at is null)`);
   if (f.roleId) conds.push(sql`exists (select 1 from user_roles ur where ur.user_id = "users"."id" and ur.role_id = ${f.roleId})`);
   const where = and(...conds);
   const page = Math.max(1, f.page ?? 1);
