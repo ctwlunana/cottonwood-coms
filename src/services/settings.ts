@@ -18,6 +18,16 @@ export const SETTING_DEFS: Record<string, { label: string; default: unknown; val
       return /^\d\d:\d\d$/.test(o?.start ?? "") && /^\d\d:\d\d$/.test(o?.end ?? "") ? null : "Format HH:MM";
     },
   },
+  "maintenance.sla_hours": {
+    label: "Batas waktu work order per prioritas (jam): kritis/tinggi/normal/rendah", default: { critical: 4, high: 24, normal: 72, low: 168 },
+    validate: (v) => {
+      const o = v as Record<string, unknown>;
+      return ["critical", "high", "normal", "low"].every((k) => Number.isInteger(o?.[k]) && (o[k] as number) > 0 && (o[k] as number) <= 2000) ? null : "Isi jam (bilangan bulat) untuk tiap prioritas";
+    },
+  },
+  "escalation.unassigned_minutes": { label: "Eskalasi WO kritis/tinggi yang belum ditugaskan setelah (menit)", default: 30, validate: (v) => (Number.isInteger(v) && (v as number) >= 5 && (v as number) <= 1440 ? null : "5–1440 menit") },
+  "escalation.overdue_gm_hours": { label: "Eskalasi ke GM jika terlambat lebih dari (jam)", default: 24, validate: (v) => (Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 720 ? null : "1–720 jam") },
+  "checklist.reminder_time": { label: "Pengingat checklist harian yang belum diisi (jam WIB)", default: "15:00", validate: (v) => (typeof v === "string" && /^\d\d:\d\d$/.test(v) ? null : "Format HH:MM") },
   "session.idle_hours": { label: "Sesi berakhir jika tidak aktif (jam)", default: 12, validate: (v) => (Number.isInteger(v) && (v as number) >= 1 && (v as number) <= 72 ? null : "1–72 jam") },
 };
 

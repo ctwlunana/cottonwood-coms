@@ -10,7 +10,8 @@ import { storage, sniff, maxUploadBytes, type Storage } from "@/lib/storage";
  * Per-entity access policy for attachments. Each module registers how to check
  * read / write access to its records. Unknown entity types are denied.
  */
-type Policy = { read: (tx: Tx, a: Actor, id: string) => Promise<void>; write: (tx: Tx, a: Actor, id: string) => Promise<void> };
+export type Policy = { read: (tx: Tx, a: Actor, id: string) => Promise<void>; write: (tx: Tx, a: Actor, id: string) => Promise<void> };
+export function registerAttachmentPolicy(entityType: string, p: Policy) { ATTACHMENT_POLICIES[entityType] = p; }
 export const ATTACHMENT_POLICIES: Record<string, Policy> = {
   property: {
     read: (tx, a, id) => assertPropertyAccess(tx, a, "property.view", id),
@@ -25,6 +26,15 @@ export async function addAttachments(tx: Tx, actor: Actor, entityType: string, e
   if (!policy) throw new ForbiddenError();
   await policy.write(tx, actor, entityId);
   if (!files.length) throw new ValidationError("Tidak ada file yang dipilih.");
+  return saveFiles(tx, actor, entityType, entityId, files, kind, store);
+}
+
+/**
+ * Store files for a record. INTERNAL: callers must already have authorized the actor for
+ * the record (module services call this after their own permission checks).
+ */
+export async function saveFiles(tx: Tx, actor: Actor, entityType: string, entityId: string, files: UploadFile[], kind = "photo", store: Storage = storage()) {
+  if (!files.length) return [];
   if (files.length > 10) throw new ValidationError("Maksimal 10 file sekaligus.");
   const out = [];
   for (const f of files) {
@@ -60,4 +70,13 @@ export async function removeAttachment(tx: Tx, actor: Actor, id: string) {
   await policy.write(tx, actor, a.entityId);
   await tx.update(attachments).set({ deletedAt: new Date() }).where(eq(attachments.id, id));
   await audit(tx, actor, { action: "attachment.removed", entityType: a.entityType, entityId: a.entityId, before: { id, name: a.originalName } });
+}
+
+/** Non-deleted attachments of one or more records (caller has authorized access to the records). */
+export async function filesFor(tx: Tx, entityType: string, entityIds: string[]) {
+  if (!entityIds.length) return [];
+  const { inArray, asc } = await import("drizzle-orm");
+  return tx.select().from(attachments)
+    .where(and(eq(attachments.entityType, entityType), inArray(attachments.entityId, entityIds), isNull(attachments.deletedAt)))
+    .orderBy(asc(attachments.createdAt));
 }

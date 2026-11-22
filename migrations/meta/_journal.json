@@ -36,6 +36,20 @@
       "when": 1795359003525,
       "tag": "0004_supabase_lockdown",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1795360080176,
+      "tag": "0005_stage2_operations",
+      "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1795360081097,
+      "tag": "0006_stage2_constraints",
+      "breakpoints": true
     }
   ]
 }

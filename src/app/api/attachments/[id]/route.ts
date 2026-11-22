@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { db } from "@/db";
 import { getSession } from "@/lib/session";
 import { readAttachment } from "@/services/attachments";
+import "@/services/attachment-policies";
 import { AppError } from "@/lib/errors";
 
 /** Authorized file download: access is checked against the owning record every time. */

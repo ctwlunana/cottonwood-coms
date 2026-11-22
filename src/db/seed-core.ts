@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import type { Tx } from "@/db";
-import { permissions, departments, roles, rolePermissions, users, userRoles, auditLogs } from "@/db/schema";
+import { permissions, departments, roles, rolePermissions, users, userRoles, auditLogs, checklistTemplates, checklistTemplateItems, hkTeams, hkTeamMembers } from "@/db/schema";
+import { DEFAULT_CHECKLIST } from "@/services/checklists";
 import { PERMISSIONS, DEFAULT_ROLES, DEPARTMENTS, normalizeGrant } from "@/lib/permissions";
 import { hashPassword } from "@/lib/crypto";
 import { loadActor } from "@/lib/authz";
@@ -38,6 +39,12 @@ export async function seedBase(tx: Tx, opts: { resetMatrix?: boolean } = {}) {
       const grants = r.grants.map(normalizeGrant);
       await tx.insert(rolePermissions).values(grants.map((g) => ({ roleId: roleId!, permissionCode: g.code, scope: g.scope })));
     }
+  }
+  // Default daily villa checklist (real configuration, editable in Pengaturan → Checklist).
+  const [anyTpl] = await tx.select({ id: checklistTemplates.id }).from(checklistTemplates).limit(1);
+  if (!anyTpl) {
+    const [t] = await tx.insert(checklistTemplates).values({ name: "Checklist Harian Villa", description: "Inspeksi harian oleh Villa Keeper" }).returning();
+    await tx.insert(checklistTemplateItems).values(DEFAULT_CHECKLIST.map((i, n) => ({ templateId: t.id, section: i.section, label: i.label, category: i.category, sortOrder: (n + 1) * 10 })));
   }
   if (createdRoles.length || opts.resetMatrix) {
     await tx.insert(auditLogs).values({ action: opts.resetMatrix ? "seed.matrix_reset" : "seed.base", entityType: "system", after: { createdRoles } });
@@ -125,5 +132,7 @@ export async function seedDemo(tx: Tx) {
   }
   await assignLocationUser(tx, actor, locs[0].id, ids.get("demo.pic.utara")!, "location_pic");
   await assignLocationUser(tx, actor, locs[0].id, ids.get("demo.hk.tl")!, "hk_team_leader");
+  const [team] = await tx.insert(hkTeams).values({ name: "[DEMO] Tim Utara", locationId: locs[0].id, leaderId: ids.get("demo.hk.tl")!, isDemo: true }).returning();
+  await tx.insert(hkTeamMembers).values([{ teamId: team.id, userId: ids.get("demo.hk1")! }, { teamId: team.id, userId: ids.get("demo.hk2")! }]);
   return { skipped: false, users: people.length + 1, villas: villas.length };
 }
