@@ -21,7 +21,7 @@ export function EmployeeFields({ e = {}, departments }: { e?: E; departments: De
           {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
         </select></div>
       <div><label className="label">Jabatan</label><input name="jobTitle" className="input" defaultValue={e.jobTitle ?? ""} /></div>
-      <div><label className="label">No. HP / WhatsApp</label><input name="phone" type="tel" className="input" defaultValue={e.phone ?? ""} /></div>
+      <div><label className="label">No. HP</label><input name="phone" type="tel" className="input" defaultValue={e.phone ?? ""} /></div>
       <div className="sm:col-span-2"><label className="label">Email</label><input name="email" type="email" className="input" defaultValue={e.email ?? ""} /></div>
     </div>
   );
@@ -33,7 +33,7 @@ export function RoleCheckboxes({ roles, selected = [] }: { roles: Role[]; select
       {roles.map((r) => (
         <label key={r.id} className="flex items-start gap-2 rounded-lg border border-slate-200 p-2 text-sm hover:bg-slate-50">
           <input type="checkbox" name="roleIds" value={r.id} defaultChecked={selected.includes(r.id)} className="mt-1" />
-          <span><span className="font-medium">{r.name}</span>{r.financial && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-800">OTORITAS KEUANGAN</span>}
+          <span><span className="font-medium">{r.name}</span>{r.financial && <span className="ml-1 rounded bg-amber-100 px-1 text-[10px] font-semibold text-amber-800">HANYA GM</span>}
             {r.description && <span className="block text-xs text-slate-500">{r.description}</span>}</span>
         </label>
       ))}

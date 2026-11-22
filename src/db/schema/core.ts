@@ -22,7 +22,7 @@ export const locationAssignmentKindEnum = pgEnum("location_assignment_kind", [
   "location_pic", "hk_team_leader",
 ]);
 export const priorityEnum = pgEnum("priority", ["critical", "high", "normal", "low"]);
-export const channelEnum = pgEnum("notification_channel", ["in_app", "email", "whatsapp"]);
+export const channelEnum = pgEnum("notification_channel", ["in_app", "push"]);
 export const deliveryStatusEnum = pgEnum("delivery_status", ["pending", "sent", "failed", "skipped"]);
 
 // ---------------------------------------------------------------- organization
@@ -256,8 +256,7 @@ export const notificationPreferences = pgTable("notification_preferences", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   type: text("type").notNull(), // "*" = default for all types
   inApp: boolean("in_app").notNull().default(true),
-  email: boolean("email").notNull().default(false),
-  whatsapp: boolean("whatsapp").notNull().default(false),
+  push: boolean("push").notNull().default(true),
 }, (t) => [primaryKey({ columns: [t.userId, t.type] })]);
 
 // ---------------------------------------------------------------- settings & counters
@@ -273,3 +272,20 @@ export const idCounters = pgTable("id_counters", {
   key: text("key").primaryKey(),
   value: integer("value").notNull().default(0),
 });
+
+// ---------------------------------------------------------------- backups
+export const backupKindEnum = pgEnum("backup_kind", ["database", "files"]);
+export const backupLogs = pgTable("backup_logs", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  kind: backupKindEnum("kind").notNull(),
+  trigger: text("trigger").notNull(), // "manual_download" | "scheduled"
+  requestedBy: uuid("requested_by").references(() => users.id),
+  storageKey: text("storage_key"), // set for scheduled backups kept in object storage
+  tables: integer("tables"),
+  rows: integer("rows"),
+  files: integer("files"),
+  sizeBytes: integer("size_bytes"),
+  status: text("status").notNull().default("completed"),
+  error: text("error"),
+  createdAt: ts("created_at").notNull().defaultNow(),
+}, (t) => [index("backup_logs_created_idx").on(t.createdAt)]);

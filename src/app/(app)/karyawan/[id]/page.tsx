@@ -49,7 +49,7 @@ export default async function EmployeeDetail({ params }: { params: Promise<{ id:
               <ActionForm action={setRolesAction}>
                 <input type="hidden" name="id" value={id} />
                 <RoleCheckboxes roles={roles.map((r) => ({ id: r.id, name: r.name, description: r.description, financial: fin.has(r.id) }))} selected={userRoles.map((r) => r.id)} />
-                <p className="text-xs text-slate-500">Peran berlabel <b>OTORITAS KEUANGAN</b> hanya dapat diberikan/dicabut oleh GM. Satu karyawan boleh memiliki lebih dari satu peran.</p>
+                <p className="text-xs text-slate-500">Peran berlabel <b>HANYA GM</b> (keuangan/approval/backup) hanya dapat diberikan/dicabut oleh GM. Satu karyawan boleh memiliki lebih dari satu peran.</p>
                 <div className="flex justify-end"><SubmitButton>Simpan peran</SubmitButton></div>
               </ActionForm>
             ) : (

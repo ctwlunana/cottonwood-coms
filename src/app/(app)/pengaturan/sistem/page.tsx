@@ -3,8 +3,7 @@ import { requireActor } from "@/lib/session";
 import { can } from "@/lib/authz";
 import { load } from "@/lib/page";
 import { listSettings } from "@/services/settings";
-import { emailAdapter, whatsappAdapter } from "@/lib/notify/channels";
-import { PageHeader, Card, Badge } from "@/components/ui";
+import { PageHeader, Card } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Forbidden } from "@/components/forbidden";
 import { fmtDateTime, fmtIDR } from "@/lib/format";
@@ -44,13 +43,8 @@ export default async function SystemSettings() {
             </Card>
           );
         })}
-        <Card title="Kanal notifikasi eksternal">
-          <ul className="space-y-2 text-sm">
-            <li className="flex justify-between">In-app <Badge tone="green">Aktif</Badge></li>
-            <li className="flex justify-between">Email (SMTP) {emailAdapter.configured() ? <Badge tone="green">Terkonfigurasi</Badge> : <Badge tone="yellow">Belum dikonfigurasi</Badge>}</li>
-            <li className="flex justify-between">WhatsApp Business API {whatsappAdapter.configured() ? <Badge tone="green">Terkonfigurasi (belum diverifikasi live)</Badge> : <Badge tone="yellow">Belum dikonfigurasi</Badge>}</li>
-          </ul>
-          <p className="mt-3 text-xs text-slate-500">Diatur melalui variabel lingkungan server (lihat docs/DEPLOYMENT.md). Kanal yang belum dikonfigurasi dicatat sebagai &quot;skipped&quot; di log pengiriman.</p>
+        <Card title="Komunikasi">
+          <p className="text-sm text-slate-600">Seluruh komunikasi operasional dilakukan di dalam COMS (notifikasi in-app). WhatsApp dan email tidak digunakan.</p>
         </Card>
       </div>
     </>

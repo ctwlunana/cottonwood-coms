@@ -4,7 +4,7 @@ import { db } from "@/db";
 import { requireActor } from "@/lib/session";
 import { load } from "@/lib/page";
 import { getMatrix, listRoles } from "@/services/rbac";
-import { FINANCIAL_PERMISSIONS } from "@/lib/permissions";
+import { PROTECTED_PERMISSIONS } from "@/lib/permissions";
 import { PageHeader, Card, Field } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { Forbidden } from "@/components/forbidden";
@@ -19,12 +19,12 @@ export default async function RolesMatrix() {
   const res = await load(async () => Promise.all([getMatrix(db, actor), listRoles(db, actor)]));
   if (!res.ok) return <Forbidden message={res.denied} />;
   const [{ roles, permissions, grants }, roleStats] = res.data;
-  const fin = new Set<string>(FINANCIAL_PERMISSIONS);
+  const fin = new Set<string>(PROTECTED_PERMISSIONS);
   const modules = [...new Set(permissions.map((p) => p.module))];
   return (
     <>
       <PageHeader title="Peran & Hak Akses" back={{ href: "/pengaturan", label: "Pengaturan" }}
-        subtitle={<>Klik nama peran untuk mengubah. Cakupan: <b>●</b> {SCOPE_SHORT.all} · <b>D</b> {SCOPE_SHORT.department} · <b>T</b> villa {SCOPE_SHORT.assigned.toLowerCase()} · <b>S</b> milik {SCOPE_SHORT.own.toLowerCase()}. Baris kuning = otoritas keuangan/approval (hanya GM yang dapat mengubah).</>} />
+        subtitle={<>Klik nama peran untuk mengubah. Cakupan: <b>●</b> {SCOPE_SHORT.all} · <b>D</b> {SCOPE_SHORT.department} · <b>T</b> villa {SCOPE_SHORT.assigned.toLowerCase()} · <b>S</b> milik {SCOPE_SHORT.own.toLowerCase()}. Baris kuning = hak akses dilindungi: keuangan, approval, backup (hanya GM yang dapat mengubah).</>} />
       <div className="card mb-6 overflow-auto" style={{ maxHeight: "70vh" }}>
         <table className="text-xs">
           <thead className="sticky top-0 z-10 bg-white">

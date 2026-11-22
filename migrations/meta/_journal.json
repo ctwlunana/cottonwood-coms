@@ -15,6 +15,27 @@
       "when": 1795356685898,
       "tag": "0001_audit_append_only",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1795358989426,
+      "tag": "0002_drop_external_channels",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1795358990295,
+      "tag": "0003_push_pref_and_backups",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1795359003525,
+      "tag": "0004_supabase_lockdown",
+      "breakpoints": true
     }
   ]
 }

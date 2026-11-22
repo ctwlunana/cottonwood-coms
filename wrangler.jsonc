@@ -1,0 +1,32 @@
+{
+  // COMS on Cloudflare Workers (OpenNext). Fill the two IDs marked TODO during first deploy
+  // (see docs/DEPLOYMENT.md). Secrets (CRON_SECRET) are set with `wrangler secret put`.
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "coms",
+  "main": "worker.ts",
+  "compatibility_date": "2026-11-01",
+  "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
+  "assets": { "directory": ".open-next/assets", "binding": "ASSETS" },
+  "observability": { "enabled": true },
+  "limits": { "cpu_ms": 60000 },
+  "placement": { "mode": "smart" },
+  "hyperdrive": [
+    {
+      "binding": "HYPERDRIVE",
+      "id": "TODO_HYPERDRIVE_ID",
+      "localConnectionString": "postgres://coms:coms_dev@localhost:5432/coms"
+    }
+  ],
+  "r2_buckets": [{ "binding": "FILES", "bucket_name": "coms-files" }],
+  "triggers": {
+    // every 5 min: notification delivery & housekeeping; 19:00 UTC = 02:00 WIB: nightly backup to R2
+    "crons": ["*/5 * * * *", "0 19 * * *"]
+  },
+  "vars": {
+    "APP_URL": "https://ops.cottonwoodstays.com",
+    "COOKIE_SECURE": "true",
+    "UPLOAD_MAX_MB": "10",
+    "BACKUP_KEEP_DAYS": "30"
+  },
+  "routes": [{ "pattern": "ops.cottonwoodstays.com", "custom_domain": true }]
+}

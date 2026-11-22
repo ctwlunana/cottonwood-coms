@@ -8,7 +8,8 @@ import { listProperties, propertyStats, PROPERTY_STATUS_LABEL } from "@/services
 import { listMyNotifications } from "@/services/notifications";
 import { PageHeader, Stat, Card, Empty, Badge } from "@/components/ui";
 import { PropertyStatusBadge } from "@/components/badges";
-import { fmtRelative } from "@/lib/format";
+import { fmtRelative, fmtDateTime } from "@/lib/format";
+import { lastSuccessfulBackup } from "@/services/backup";
 
 export const metadata = { title: "Dashboard" };
 
@@ -16,7 +17,7 @@ export default async function Dashboard() {
   const actor = await requireActor();
   const showProps = can(actor, "property.view");
   const propScope = scopeOf(actor, "property.view");
-  const [stats, myVillas, notif, activeEmployees, resetReqs] = await Promise.all([
+  const [stats, myVillas, notif, activeEmployees, resetReqs, lastBackup] = await Promise.all([
     showProps ? propertyStats(db, actor) : null,
     showProps && propScope !== "all" && propScope !== "department" ? listProperties(db, actor) : null,
     listMyNotifications(db, actor, { unreadOnly: true }),
@@ -24,13 +25,20 @@ export default async function Dashboard() {
       ? db.select({ c: sql<number>`count(*)::int` }).from(users).where(eq(users.isActive, true)).then((r) => r[0].c) : null,
     can(actor, "employee.reset_password")
       ? db.select({ c: sql<number>`count(*)::int` }).from(passwordResetRequests).where(isNull(passwordResetRequests.handledAt)).then((r) => r[0].c) : null,
+    can(actor, "backup.run") ? lastSuccessfulBackup(db).then((d) => d ?? "never") : null,
   ]);
+  const backupStale = lastBackup === "never" || (lastBackup instanceof Date && Date.now() - lastBackup.getTime() > 7 * 86400_000);
   const wide = propScope === "all" || propScope === "department";
   const total = stats ? Object.values(stats.byStatus).reduce((a, b) => a + b, 0) : 0;
 
   return (
     <>
       <PageHeader title={`Halo, ${actor.fullName}`} subtitle="Ringkasan dari data COMS saat ini." />
+      {lastBackup !== null && backupStale && (
+        <Link href="/pengaturan/backup" className="mb-4 block rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+          {lastBackup === "never" ? "Belum pernah ada backup data." : `Backup terakhir ${fmtDateTime(lastBackup as Date)} (lebih dari 7 hari).`} Klik untuk membuat <b>Backup File</b> sekarang.
+        </Link>
+      )}
 
       {stats && (
         <div className={`mb-6 grid grid-cols-2 gap-3 ${wide ? "md:grid-cols-3 xl:grid-cols-6" : "md:grid-cols-3"}`}>

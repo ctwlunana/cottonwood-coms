@@ -57,7 +57,7 @@ export async function notify(tx: Tx, n: NotifyInput): Promise<number> {
       eq(notificationPreferences.userId, userId), inArray(notificationPreferences.type, [n.type, "*"]),
     ));
     const pref = prefs.find((p) => p.type === n.type) ?? prefs.find((p) => p.type === "*")
-      ?? { inApp: true, email: false, whatsapp: false };
+      ?? { inApp: true, push: true };
 
     const [row] = await tx.insert(notifications).values({
       userId, type: n.type, title: n.title, body: n.body ?? null, link: n.link ?? null,
@@ -69,14 +69,10 @@ export async function notify(tx: Tx, n: NotifyInput): Promise<number> {
     await tx.insert(notificationDeliveryLogs).values({
       notificationId: row.id, recipientId: userId, channel: "in_app", status: "sent", sentAt: new Date(),
     });
-    // Critical incidents go to every external channel regardless of preference.
-    const wantEmail = priority === "critical" || pref.email;
-    const wantWa = priority === "critical" || pref.whatsapp;
-    for (const [ch, want] of [["email", wantEmail], ["whatsapp", wantWa]] as const) {
-      if (!want) continue;
-      await tx.insert(notificationDeliveryLogs).values({
-        notificationId: row.id, recipientId: userId, channel: ch, status: "pending",
-      });
+    // Queue external channels (none configured today; push is planned). Critical ignores preferences.
+    for (const a of ADAPTERS) {
+      if (priority !== "critical" && !pref.push) continue;
+      await tx.insert(notificationDeliveryLogs).values({ notificationId: row.id, recipientId: userId, channel: a.name, status: "pending" });
     }
   }
   return created;
@@ -102,7 +98,7 @@ export async function dispatchPending(tx: Tx, adapters: ChannelAdapter[] = ADAPT
     .select({
       log: notificationDeliveryLogs,
       title: notifications.title, body: notifications.body, link: notifications.link, priority: notifications.priority,
-      email: users.email, phone: users.phone,
+      userId: users.id,
     })
     .from(notificationDeliveryLogs)
     .innerJoin(notifications, eq(notifications.id, notificationDeliveryLogs.notificationId))
@@ -118,7 +114,7 @@ export async function dispatchPending(tx: Tx, adapters: ChannelAdapter[] = ADAPT
     const set = (v: Partial<typeof notificationDeliveryLogs.$inferInsert>) =>
       tx.update(notificationDeliveryLogs).set(v).where(eq(notificationDeliveryLogs.id, p.log.id));
     if (!adapter || !adapter.configured()) { await set({ status: "skipped", error: `Kanal ${p.log.channel} belum dikonfigurasi` }); skipped++; continue; }
-    const to = adapter.address({ email: p.email, phone: p.phone });
+    const to = adapter.address({ id: p.userId });
     if (!to) { await set({ status: "skipped", error: "Penerima tidak memiliki kontak untuk kanal ini" }); skipped++; continue; }
     const r = await adapter.send({ to, subject: p.title, text: p.body ?? p.title, link: p.link });
     if (r.ok) { await set({ status: "sent", sentAt: new Date(), error: null }); sent++; }

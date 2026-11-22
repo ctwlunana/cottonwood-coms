@@ -13,6 +13,8 @@ export const ACTION_LABEL: Record<string, string> = {
   "attachment.added": "File diunggah", "attachment.removed": "File disembunyikan",
   "setting.update": "Pengaturan diubah", "department.created": "Departemen dibuat", "department.updated": "Departemen diubah",
   "import.villas": "Impor villa", "import.employees": "Impor karyawan",
+  "backup.database_download_started": "Backup database dimulai", "backup.database_downloaded": "Backup database diunduh",
+  "backup.files_download_started": "Backup file dimulai", "backup.files_downloaded": "Backup file diunduh", "backup.scheduled_downloaded": "Backup otomatis diunduh",
 };
 
 function fmtVal(v: unknown): string {

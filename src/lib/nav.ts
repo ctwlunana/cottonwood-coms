@@ -15,7 +15,7 @@ export const NAV: NavItem[] = [
   { href: "/lokasi", label: "Lokasi", icon: "⌖", anyOf: ["property.view"], group: "kerja" },
   { href: "/karyawan", label: "Karyawan", icon: "☺", anyOf: ["employee.view"], group: "manajemen" },
   { href: "/audit", label: "Audit Trail", icon: "≣", anyOf: ["audit.view"], group: "manajemen" },
-  { href: "/pengaturan", label: "Pengaturan", icon: "⚙", anyOf: ["settings.manage", "rbac.manage", "department.manage", "import.run"], group: "admin" },
+  { href: "/pengaturan", label: "Pengaturan", icon: "⚙", anyOf: ["settings.manage", "rbac.manage", "department.manage", "import.run", "backup.run"], group: "admin" },
 ];
 
 export function navFor(actor: Actor) {

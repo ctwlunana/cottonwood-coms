@@ -32,11 +32,11 @@ export async function myDeliveryLog(tx: Tx, actor: Actor, notificationId: string
 
 export async function getMyPreferences(tx: Tx, actor: Actor) {
   const [p] = await tx.select().from(notificationPreferences).where(and(eq(notificationPreferences.userId, actor.id), eq(notificationPreferences.type, "*")));
-  return p ?? { userId: actor.id, type: "*", inApp: true, email: false, whatsapp: false };
+  return p ?? { userId: actor.id, type: "*", inApp: true, push: true };
 }
 
-export async function setMyPreferences(tx: Tx, actor: Actor, v: { email: boolean; whatsapp: boolean }) {
+export async function setMyPreferences(tx: Tx, actor: Actor, v: { push: boolean }) {
   // In-app is mandatory: COMS is the system of record.
-  await tx.insert(notificationPreferences).values({ userId: actor.id, type: "*", inApp: true, email: v.email, whatsapp: v.whatsapp })
-    .onConflictDoUpdate({ target: [notificationPreferences.userId, notificationPreferences.type], set: { email: v.email, whatsapp: v.whatsapp } });
+  await tx.insert(notificationPreferences).values({ userId: actor.id, type: "*", inApp: true, push: v.push })
+    .onConflictDoUpdate({ target: [notificationPreferences.userId, notificationPreferences.type], set: { push: v.push } });
 }

@@ -2,7 +2,6 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  serverExternalPackages: ["pg", "bcryptjs"],
   experimental: { serverActions: { bodySizeLimit: "12mb" } },
   async headers() {
     return [
@@ -19,3 +18,4 @@ const nextConfig: NextConfig = {
   },
 };
 export default nextConfig;
+

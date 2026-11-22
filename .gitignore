@@ -7,3 +7,6 @@ storage/
 next-env.d.ts
 coverage
 backups/
+.open-next
+.wrangler
+.dev.vars

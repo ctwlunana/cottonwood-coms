@@ -58,7 +58,7 @@ export async function uploadPropertyPhotosAction(_: ActionState, fd: FormData): 
   const id = str(fd, "propertyId");
   const files = fd.getAll("files").filter((f): f is File => f instanceof File && f.size > 0);
   const r = await runAction(async (actor, tx) => {
-    const data = await Promise.all(files.map(async (f) => ({ name: f.name, data: Buffer.from(await f.arrayBuffer()) })));
+    const data = await Promise.all(files.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) })));
     const res = await addAttachments(tx, actor, "property", id, data);
     return { ok: true, message: `${res.length} foto diunggah.` };
   });

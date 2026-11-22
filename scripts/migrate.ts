@@ -7,6 +7,8 @@ export async function runMigrations(url: string) {
   const pool = new Pool({ connectionString: url, max: 1 });
   try {
     await migrate(drizzle(pool), { migrationsFolder: "./migrations" });
+    // Re-apply RLS / Data-API lockdown so tables added by any migration are covered (see 0004).
+    await pool.query("select coms_lockdown()");
   } finally {
     await pool.end();
   }

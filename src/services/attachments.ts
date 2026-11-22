@@ -4,7 +4,7 @@ import { attachments } from "@/db/schema";
 import { type Actor, assertPropertyAccess, requirePermission } from "@/lib/authz";
 import { audit } from "@/lib/audit";
 import { NotFoundError, ValidationError, ForbiddenError } from "@/lib/errors";
-import { localStorage, sniff, maxUploadBytes, type Storage } from "@/lib/storage";
+import { storage, sniff, maxUploadBytes, type Storage } from "@/lib/storage";
 
 /**
  * Per-entity access policy for attachments. Each module registers how to check
@@ -18,9 +18,9 @@ export const ATTACHMENT_POLICIES: Record<string, Policy> = {
   },
 };
 
-export type UploadFile = { name: string; data: Buffer };
+export type UploadFile = { name: string; data: Uint8Array };
 
-export async function addAttachments(tx: Tx, actor: Actor, entityType: string, entityId: string, files: UploadFile[], kind = "photo", storage: Storage = localStorage) {
+export async function addAttachments(tx: Tx, actor: Actor, entityType: string, entityId: string, files: UploadFile[], kind = "photo", store: Storage = storage()) {
   const policy = ATTACHMENT_POLICIES[entityType];
   if (!policy) throw new ForbiddenError();
   await policy.write(tx, actor, entityId);
@@ -32,7 +32,7 @@ export async function addAttachments(tx: Tx, actor: Actor, entityType: string, e
     if (f.data.length > maxUploadBytes()) throw new ValidationError(`File ${f.name} melebihi batas ${process.env.UPLOAD_MAX_MB ?? 10} MB.`);
     const t = sniff(f.data);
     if (!t) throw new ValidationError(`Tipe file ${f.name} tidak didukung (JPG, PNG, WEBP, HEIC, PDF).`);
-    const key = await storage.put(f.data, t.ext);
+    const key = await store.put(f.data, t.ext, { prefix: "attachments/", contentType: t.mime });
     const [row] = await tx.insert(attachments).values({
       entityType, entityId, kind, storageKey: key, originalName: f.name.slice(0, 200), mime: t.mime, sizeBytes: f.data.length, uploadedBy: actor.id,
     }).returning();
@@ -42,13 +42,13 @@ export async function addAttachments(tx: Tx, actor: Actor, entityType: string, e
   return out;
 }
 
-export async function readAttachment(tx: Tx, actor: Actor, id: string, storage: Storage = localStorage) {
+export async function readAttachment(tx: Tx, actor: Actor, id: string, store: Storage = storage()) {
   const [a] = await tx.select().from(attachments).where(and(eq(attachments.id, id), isNull(attachments.deletedAt)));
   if (!a) throw new NotFoundError();
   const policy = ATTACHMENT_POLICIES[a.entityType];
   if (!policy) throw new ForbiddenError();
   await policy.read(tx, actor, a.entityId);
-  return { meta: a, data: await storage.get(a.storageKey) };
+  return { meta: a, data: await store.get(a.storageKey) };
 }
 
 /** Soft-remove (file kept for audit). */

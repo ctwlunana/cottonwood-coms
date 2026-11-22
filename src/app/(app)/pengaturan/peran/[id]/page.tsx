@@ -4,7 +4,7 @@ import { can } from "@/lib/authz";
 import { load } from "@/lib/page";
 import { getMatrix } from "@/services/rbac";
 import { listAudit } from "@/services/audit";
-import { FINANCIAL_PERMISSIONS, SCOPES, SCOPE_LABEL } from "@/lib/permissions";
+import { PROTECTED_PERMISSIONS, SCOPES, SCOPE_LABEL } from "@/lib/permissions";
 import { PageHeader, Card, Badge } from "@/components/ui";
 import { ActionForm, SubmitButton } from "@/components/forms";
 import { AuditList } from "@/components/audit-list";
@@ -20,7 +20,7 @@ export default async function RoleEdit({ params }: { params: Promise<{ id: strin
   const { roles, permissions, grants } = res.data;
   const role = roles.find((r) => r.id === id);
   if (!role) notFound();
-  const fin = new Set<string>(FINANCIAL_PERMISSIONS);
+  const fin = new Set<string>(PROTECTED_PERMISSIONS);
   const gmLevel = can(actor, "approval.rule_manage");
   const own = actor.roleSlugs.includes(role.slug);
   const history = await listAudit(db, actor, { entityType: "role", entityId: id }).catch(() => null);
@@ -40,7 +40,7 @@ export default async function RoleEdit({ params }: { params: Promise<{ id: strin
                   const locked = (fin.has(p.code) || own) && !gmLevel;
                   return (
                     <li key={p.code} className="flex items-center justify-between gap-3">
-                      <div className="min-w-0 text-sm">{p.description} {fin.has(p.code) && <Badge tone="yellow">Keuangan</Badge>}
+                      <div className="min-w-0 text-sm">{p.description} {fin.has(p.code) && <Badge tone="yellow">Hanya GM</Badge>}
                         <div className="font-mono text-[10px] text-slate-400">{p.code}{p.stage > 1 && ` · modul tahap ${p.stage}`}</div></div>
                       {locked && <input type="hidden" name={`p:${p.code}`} value={cur} />}
                       {p.scoped ? (

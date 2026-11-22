@@ -12,29 +12,27 @@ import { nextCode } from "@/lib/codes";
 import { listProperties } from "@/services/properties";
 
 describe("notifications", () => {
-  it("deduplicates and logs skipped external channels when not configured", () => inTx(async (tx) => {
+  it("deduplicates and stores in-app delivery (no external channels: in-app only policy)", () => inTx(async (tx) => {
     const u = await userId(tx, "demo.spv.eng");
     const base = { type: "test.event", userIds: [u], title: "Uji", dedupeKey: "k1", priority: "critical" as const };
     expect(await notify(tx, base)).toBe(1);
     expect(await notify(tx, base)).toBe(0);
-    const r = await dispatchPending(tx, undefined, new Date("2026-01-01T05:00:00Z")); // 12:00 WIB
-    expect(r.skipped).toBe(2);
     const logs = await tx.select().from(notificationDeliveryLogs).where(eq(notificationDeliveryLogs.recipientId, u));
-    expect(logs.map((l) => `${l.channel}:${l.status}`).sort()).toEqual(["email:skipped", "in_app:sent", "whatsapp:skipped"]);
-    expect(logs.find((l) => l.channel === "email")!.error).toMatch(/belum dikonfigurasi/);
+    expect(logs.map((l) => `${l.channel}:${l.status}`)).toEqual(["in_app:sent"]);
   }));
 
-  it("retries failing channels then marks failed; quiet hours defer non-critical", () => inTx(async (tx) => {
+  it("future channels: retries then marks failed; quiet hours defer non-critical", () => inTx(async (tx) => {
     const u = await userId(tx, "demo.cs1");
-    await tx.execute(`update users set email = 'x@example.invalid' where id = '${u}'`);
-    await tx.insert((await import("@/db/schema")).notificationPreferences).values({ userId: u, type: "*", inApp: true, email: true, whatsapp: false });
+    const failing = [{ name: "push" as const, configured: () => true, address: () => "sub", send: async () => ({ ok: false as const, error: "push down", retryable: true }) }];
+    const { notifications: n } = await import("@/db/schema");
     await notify(tx, { type: "t", userIds: [u], title: "Normal" });
-    const failing = [{ name: "email" as const, configured: () => true, address: () => "x", send: async () => ({ ok: false as const, error: "smtp down", retryable: true }) }];
+    const [row] = await tx.select().from(n).where(eq(n.userId, u));
+    await tx.insert(notificationDeliveryLogs).values({ notificationId: row.id, recipientId: u, channel: "push", status: "pending" });
     const night = new Date("2026-01-01T16:00:00Z"); // 23:00 WIB
-    expect((await dispatchPending(tx, failing, night)).failed).toBe(0); // deferred
+    expect((await dispatchPending(tx, failing, night)).failed).toBe(0); // deferred by quiet hours
     const day = new Date("2026-01-01T05:00:00Z");
     for (let i = 0; i < 3; i++) await dispatchPending(tx, failing, day);
-    const [log] = await tx.select().from(notificationDeliveryLogs).where(eq(notificationDeliveryLogs.channel, "email"));
+    const [log] = await tx.select().from(notificationDeliveryLogs).where(eq(notificationDeliveryLogs.channel, "push"));
     expect(log.status).toBe("failed");
     expect(log.retryCount).toBe(3);
   }));

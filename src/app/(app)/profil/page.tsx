@@ -1,12 +1,10 @@
 import { db } from "@/db";
 import { getSession, requireActor } from "@/lib/session";
 import { listMySessions } from "@/services/auth";
-import { getMyPreferences } from "@/services/notifications";
-import { emailAdapter, whatsappAdapter } from "@/lib/notify/channels";
 import { PageHeader, Card, Badge } from "@/components/ui";
 import { ActionForm, SubmitButton, ConfirmButton } from "@/components/forms";
 import { fmtDateTime } from "@/lib/format";
-import { changePasswordAction, revokeSessionAction, preferencesAction } from "./actions";
+import { changePasswordAction, revokeSessionAction } from "./actions";
 
 export const metadata = { title: "Profil" };
 
@@ -14,7 +12,7 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
   const actor = await requireActor({ allowPasswordChange: true });
   const s = (await getSession())!;
   const sp = await searchParams;
-  const [sessions, prefs] = await Promise.all([listMySessions(db, actor), getMyPreferences(db, actor)]);
+  const sessions = await listMySessions(db, actor);
   return (
     <>
       <PageHeader title="Profil saya" subtitle={`${actor.fullName} · ${actor.username}`} />
@@ -46,14 +44,6 @@ export default async function ProfilePage({ searchParams }: { searchParams: Prom
                   </li>
                 ))}
               </ul>
-            </Card>
-            <Card title="Preferensi notifikasi">
-              <ActionForm action={preferencesAction}>
-                <p className="text-sm text-slate-600">Notifikasi di aplikasi selalu aktif. Notifikasi kritis selalu dikirim ke semua kanal yang tersedia.</p>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="email" value="1" defaultChecked={prefs.email} /> Email {!emailAdapter.configured() && <Badge>belum dikonfigurasi</Badge>}</label>
-                <label className="flex items-center gap-2 text-sm"><input type="checkbox" name="whatsapp" value="1" defaultChecked={prefs.whatsapp} /> WhatsApp {!whatsappAdapter.configured() && <Badge>belum dikonfigurasi</Badge>}</label>
-                <SubmitButton className="btn-secondary">Simpan preferensi</SubmitButton>
-              </ActionForm>
             </Card>
           </div>
         )}

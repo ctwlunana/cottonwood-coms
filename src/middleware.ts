@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC = ["/login", "/lupa-password", "/reset-password", "/api/health"];
+const PUBLIC = ["/login", "/lupa-password", "/reset-password", "/api/health", "/api/cron"];
 
 /** Cheap gate only (cookie presence). Real session + permission checks happen server-side on every request. */
 export function middleware(req: NextRequest) {

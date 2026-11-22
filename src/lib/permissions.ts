@@ -40,6 +40,7 @@ export const PERMISSIONS = {
   "settings.manage": { module: "Pengaturan", description: "Mengubah pengaturan sistem", stage: 1 },
   "audit.view": { module: "Audit", description: "Melihat audit trail", scoped: true, stage: 1 },
   "import.run": { module: "Pengaturan", description: "Menjalankan impor CSV (villa, karyawan)", stage: 1 },
+  "backup.run": { module: "Pengaturan", description: "Membuat & mengunduh backup seluruh data (Manager ke atas)", stage: 1 },
 
   // --- Property operations (Stage 2)
   "checklist.submit": { module: "Checklist", description: "Mengisi checklist harian villa", stage: 2 },
@@ -128,6 +129,13 @@ export const FINANCIAL_PERMISSIONS: PermissionCode[] = [
   "accounting.reconcile",
 ];
 
+/**
+ * Protected permissions: can only be granted/revoked (in the matrix or via role assignment)
+ * by holders of `approval.rule_manage` (GM). Backup exports contain ALL data incl. guest
+ * personal data and finance, so it is protected too.
+ */
+export const PROTECTED_PERMISSIONS: PermissionCode[] = [...FINANCIAL_PERMISSIONS, "backup.run"];
+
 type Grant = PermissionCode | [PermissionCode, Scope];
 type RoleDef = { slug: string; name: string; department: string; description: string; grants: Grant[] };
 
@@ -168,7 +176,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "rbac.manage", "department.manage", "settings.manage",
       "approval.decide", "approval.rule_manage", "finance.view", "accounting.view",
       ["cs.case_manage", "all"], "cs.case_assign", "cs.guest_pii_view", "cs.shift_review",
-      "report.export", "notification.rule_manage",
+      "report.export", "notification.rule_manage", "backup.run",
     ],
   },
   {
@@ -178,7 +186,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
       "dashboard.view", ["property.view", "all"], "property.assign", ["employee.view", "department"],
       "checklist.submit", ["checklist.view", "all"], "checklist.template_manage",
       "maintenance.report", ["maintenance.view", "all"], "maintenance.keeper_confirm",
-      ["housekeeping.view", "all"], "housekeeping.inspect",
+      ["housekeeping.view", "all"],
       "lostfound.report", ["lostfound.view", "all"], ["lostfound.manage", "all"],
       ["inventory.view", "all"], "inventory.request", "inventory.receive_confirm",
       "purchasing.pr_create", ["purchasing.pr_view", "department"], "purchasing.pr_validate",
@@ -192,7 +200,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
     grants: [
       "dashboard.view", ["property.view", "assigned"], ["employee.view", "department"],
       "checklist.submit", ["checklist.view", "assigned"], "maintenance.report", ["maintenance.view", "assigned"],
-      "maintenance.keeper_confirm", ["housekeeping.view", "assigned"], "housekeeping.inspect",
+      "maintenance.keeper_confirm", ["housekeeping.view", "assigned"],
       "lostfound.report", ["lostfound.view", "assigned"], ["inventory.view", "assigned"],
       "inventory.request", "inventory.receive_confirm", "cs.task_work",
     ],
@@ -234,7 +242,7 @@ export const DEFAULT_ROLES: RoleDef[] = [
     grants: [
       "dashboard.view", ["property.view", "all"], ["employee.view", "department"],
       ["housekeeping.view", "all"], "housekeeping.schedule", "housekeeping.assign",
-      "housekeeping.inspect", "housekeeping.team_manage", "maintenance.report",
+      "housekeeping.team_manage", "maintenance.report",
       "lostfound.report", "purchasing.pr_create", ["purchasing.pr_view", "department"],
       "purchasing.pr_validate", "cs.task_work", ["report.view", "department"],
     ],

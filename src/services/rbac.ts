@@ -6,9 +6,9 @@ import { roles, rolePermissions, permissions, userRoles, users } from "@/db/sche
 import { type Actor, requirePermission, can } from "@/lib/authz";
 import { audit } from "@/lib/audit";
 import { ForbiddenError, NotFoundError, ValidationError, ConflictError } from "@/lib/errors";
-import { FINANCIAL_PERMISSIONS, PERMISSIONS, SCOPES, type PermissionCode, type Scope, isScoped } from "@/lib/permissions";
+import { PROTECTED_PERMISSIONS, PERMISSIONS, SCOPES, type PermissionCode, type Scope, isScoped } from "@/lib/permissions";
 
-const FIN = new Set<string>(FINANCIAL_PERMISSIONS);
+const FIN = new Set<string>(PROTECTED_PERMISSIONS);
 
 export async function listRoles(tx: Tx, actor: Actor) {
   if (!can(actor, "rbac.manage") && !can(actor, "employee.view")) throw new ForbiddenError();
@@ -33,7 +33,7 @@ export async function getMatrix(tx: Tx, actor: Actor) {
 async function roleContainsFinancial(tx: Tx, roleIds: string[]) {
   if (!roleIds.length) return false;
   const r = await tx.select({ c: rolePermissions.permissionCode }).from(rolePermissions)
-    .where(and(inArray(rolePermissions.roleId, roleIds), inArray(rolePermissions.permissionCode, FINANCIAL_PERMISSIONS)));
+    .where(and(inArray(rolePermissions.roleId, roleIds), inArray(rolePermissions.permissionCode, PROTECTED_PERMISSIONS)));
   return r.length > 0;
 }
 
@@ -125,6 +125,6 @@ export async function setUserRoles(tx: Tx, actor: Actor, userId: string, roleIds
 
 /** Role ids that carry financial/approval permissions (UI marks them; service enforces). */
 export async function financialRoleIds(tx: Tx): Promise<Set<string>> {
-  const r = await tx.selectDistinct({ id: rolePermissions.roleId }).from(rolePermissions).where(inArray(rolePermissions.permissionCode, FINANCIAL_PERMISSIONS));
+  const r = await tx.selectDistinct({ id: rolePermissions.roleId }).from(rolePermissions).where(inArray(rolePermissions.permissionCode, PROTECTED_PERMISSIONS));
   return new Set(r.map((x) => x.id));
 }

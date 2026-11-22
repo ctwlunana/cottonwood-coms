@@ -2,19 +2,26 @@ import "server-only";
 import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { cache } from "react";
-import { isIP } from "node:net";
+import { isWorkers } from "@/lib/runtime";
 import { db } from "@/db";
 import { validateSession } from "@/services/auth";
 import { loadActor, type Actor, type RequestCtx } from "@/lib/authz";
 
 export const SESSION_COOKIE = "coms_session";
 
+/** Accept only plain IPv4/IPv6 literals (stored in an inet column). */
+function isIpLiteral(s: string): boolean {
+  if (/^(25[0-5]|2[0-4]\d|1?\d?\d)(\.(25[0-5]|2[0-4]\d|1?\d?\d)){3}$/.test(s)) return true;
+  return s.length <= 45 && /^[0-9a-f:]+$/i.test(s) && s.includes(":");
+}
+
 export async function requestCtx(): Promise<RequestCtx> {
   const h = await headers();
   // Only trust X-Forwarded-For when deployed behind our own reverse proxy.
+  // On Cloudflare the true client IP is in CF-Connecting-IP (set by Cloudflare, not spoofable).
   const fwd = process.env.TRUST_PROXY === "true" ? h.get("x-forwarded-for")?.split(",")[0]?.trim() : null;
-  const raw = fwd || h.get("x-real-ip") || null;
-  return { ip: raw && isIP(raw) ? raw : null, userAgent: h.get("user-agent")?.slice(0, 400) ?? null };
+  const raw = (isWorkers ? h.get("cf-connecting-ip") : null) || fwd || h.get("x-real-ip") || null;
+  return { ip: raw && isIpLiteral(raw) ? raw : null, userAgent: h.get("user-agent")?.slice(0, 400) ?? null };
 }
 
 export async function setSessionCookie(token: string) {
