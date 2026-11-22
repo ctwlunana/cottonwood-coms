@@ -32,3 +32,9 @@ export function str(fd: FormData, k: string): string {
   const v = fd.get(k);
   return typeof v === "string" ? v : "";
 }
+
+/** Non-empty uploaded files for a form field. */
+export async function filesFrom(fd: FormData, name: string): Promise<{ name: string; data: Uint8Array }[]> {
+  const list = fd.getAll(name).filter((f): f is File => typeof f === "object" && f !== null && "arrayBuffer" in f && (f as File).size > 0);
+  return Promise.all(list.map(async (f) => ({ name: f.name, data: new Uint8Array(await f.arrayBuffer()) })));
+}

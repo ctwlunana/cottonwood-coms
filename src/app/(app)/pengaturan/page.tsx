@@ -11,6 +11,7 @@ export default async function SettingsHub() {
   const items = [
     { href: "/pengaturan/peran", label: "Peran & Hak Akses", desc: "Matriks hak akses per peran, dengan cakupan data.", ok: can(actor, "rbac.manage") },
     { href: "/pengaturan/departemen", label: "Departemen", desc: "Daftar departemen organisasi.", ok: can(actor, "department.manage") },
+    { href: "/pengaturan/checklist", label: "Template checklist", desc: "Item checklist harian villa.", ok: can(actor, "checklist.template_manage") },
     { href: "/pengaturan/sistem", label: "Pengaturan sistem", desc: "Ambang approval, jam tenang notifikasi, sesi.", ok: can(actor, "settings.manage") },
     { href: "/pengaturan/backup", label: "Backup data", desc: "Unduh backup database dan foto ke perangkat Anda. Manager ke atas.", ok: can(actor, "backup.run") },
     { href: "/pengaturan/impor", label: "Impor CSV", desc: "Impor villa dan karyawan dari template CSV.", ok: can(actor, "import.run") },

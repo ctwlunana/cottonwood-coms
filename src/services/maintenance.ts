@@ -656,3 +656,19 @@ export async function generateDuePreventive(tx: Tx, leadDays = 3) {
 }
 
 
+
+/** Villas the actor may file a maintenance report for (assigned villas, or villas they are cleaning). */
+export async function reportableVillas(tx: Tx, actor: Actor) {
+  requirePermission(actor, "maintenance.report");
+  const out = new Map<string, string>();
+  if (can(actor, "property.view")) {
+    const scope = await propertyScope(tx, actor, "property.view");
+    (await tx.select({ id: properties.id, name: properties.name }).from(properties)
+      .where(and(isNull(properties.deletedAt), scopeFilter(properties.id, scope))).orderBy(asc(properties.name))).forEach((p) => out.set(p.id, p.name));
+  }
+  const since = new Date(Date.now() - 3 * 86400_000).toISOString().slice(0, 10);
+  (await tx.selectDistinct({ id: properties.id, name: properties.name }).from(hkAssignmentStaff)
+    .innerJoin(hkAssignments, eq(hkAssignments.id, hkAssignmentStaff.assignmentId)).innerJoin(properties, eq(properties.id, hkAssignments.propertyId))
+    .where(and(eq(hkAssignmentStaff.userId, actor.id), gte(hkAssignments.checkoutDate, since)))).forEach((p) => out.set(p.id, p.name));
+  return [...out].map(([id, name]) => ({ id, name })).sort((a, b) => a.name.localeCompare(b.name));
+}

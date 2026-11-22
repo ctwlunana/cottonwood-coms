@@ -11,6 +11,10 @@ import { ActionForm, SubmitButton, ConfirmButton, PhotoInput } from "@/component
 import { Forbidden } from "@/components/forbidden";
 import { AuditList } from "@/components/audit-list";
 import { fmtDate, fmtDateTime } from "@/lib/format";
+import { listWorkOrders, listEquipment } from "@/services/maintenance";
+import { listSubmissions } from "@/services/checklists";
+import { listAssignments } from "@/services/housekeeping";
+import { WoStatusBadge, HkStatusBadge, PriorityBadge } from "@/components/badges";
 import { assignPropertyAction, endPropertyAssignmentAction, archivePropertyAction, uploadPropertyPhotosAction, removePhotoAction } from "../actions";
 
 const KIND = { villa_keeper: "Villa Keeper", inspector: "Inspektur kesiapan" } as const;
@@ -26,6 +30,13 @@ export default async function PropertyDetail({ params }: { params: Promise<{ id:
   const active = assignments.filter((a) => !a.endedAt);
   const keeper = active.find((a) => a.kind === "villa_keeper");
   const candidates = canAssign ? await usersWithRoles(db, ["villa_keeper", "location_pic", "supervisor_villa"]) : [];
+  const safe = async <T,>(p: () => Promise<T>) => { try { return await p(); } catch { return null; } };
+  const [wos, checks, cleaning, eqs] = await Promise.all([
+    can(actor, "maintenance.view") ? safe(() => listWorkOrders(db, actor, { status: "all", propertyId: p.id })) : null,
+    can(actor, "checklist.view") ? safe(() => listSubmissions(db, actor, { propertyId: p.id })) : null,
+    can(actor, "housekeeping.view") ? safe(() => listAssignments(db, actor, { propertyId: p.id })) : null,
+    can(actor, "maintenance.view") ? safe(() => listEquipment(db, actor, p.id)) : null,
+  ]);
   const inspectorCandidates = canAssign ? await usersWithRoles(db, ["villa_keeper", "location_pic", "supervisor_villa", "hk_team_leader", "hk_coordinator"]) : [];
 
   return (
@@ -80,9 +91,39 @@ export default async function PropertyDetail({ params }: { params: Promise<{ id:
             )}
           </Card>
 
-          <Card title="Riwayat operasional & perubahan">
+          {wos && (
+            <Card title={`Maintenance (${wos.total})`} actions={can(actor, "maintenance.report") && <Link className="link text-sm" href={`/maintenance/lapor?villa=${p.id}`}>+ Lapor</Link>}>
+              {wos.rows.length === 0 ? <p className="text-sm text-slate-500">Belum ada riwayat maintenance.</p> : (
+                <ul className="divide-y divide-slate-100">{wos.rows.slice(0, 15).map(({ wo, assignee }) => (
+                  <li key={wo.id}><Link href={`/maintenance/${wo.id}`} className="flex items-center justify-between gap-2 py-2 text-sm"><span className="min-w-0"><span className="font-mono text-xs text-slate-500">{wo.code}</span> {wo.title}<span className="block text-xs text-slate-500">{fmtDate(wo.reportedAt)} · {assignee ?? wo.vendorName ?? "—"}</span></span><span className="flex gap-1"><PriorityBadge p={wo.priority} /><WoStatusBadge s={wo.status} /></span></Link></li>
+                ))}</ul>
+              )}
+            </Card>
+          )}
+          {cleaning && (
+            <Card title="Housekeeping">
+              {cleaning.length === 0 ? <p className="text-sm text-slate-500">Belum ada riwayat pembersihan.</p> : (
+                <ul className="divide-y divide-slate-100">{cleaning.slice(0, 10).map(({ a, staff }) => (
+                  <li key={a.id}><Link href={`/housekeeping/${a.id}`} className="flex items-center justify-between gap-2 py-2 text-sm"><span>{fmtDate(a.checkoutDate)}<span className="block text-xs text-slate-500">{staff.join(", ") || "—"}</span></span><HkStatusBadge s={a.status} /></Link></li>
+                ))}</ul>
+              )}
+            </Card>
+          )}
+          {checks && (
+            <Card title="Checklist harian" actions={can(actor, "checklist.submit") && <Link className="link text-sm" href={`/checklist/baru?villa=${p.id}`}>+ Isi</Link>}>
+              {checks.rows.length === 0 ? <p className="text-sm text-slate-500">Belum ada checklist.</p> : (
+                <ul className="divide-y divide-slate-100">{checks.rows.slice(0, 7).map(({ s, by }) => (
+                  <li key={s.id}><Link href={`/checklist/${s.id}`} className="flex items-center justify-between py-2 text-sm"><span>{fmtDate(s.checkDate)} · {by}</span>{s.failCount ? <Badge tone="red">{s.failCount} masalah</Badge> : <Badge tone="green">Baik</Badge>}</Link></li>
+                ))}</ul>
+              )}
+            </Card>
+          )}
+          {eqs && eqs.length > 0 && (
+            <Card title="Peralatan"><ul className="space-y-1 text-sm">{eqs.map(({ e }) => <li key={e.id}>{e.name} <span className="text-xs text-slate-500">{[e.brand, e.model].filter(Boolean).join(" ")}</span></li>)}</ul></Card>
+          )}
+
+          <Card title="Riwayat perubahan data">
             <AuditList rows={history.map((h) => ({ id: h.id, action: h.action, at: h.at, user: h.user, before: h.before, after: h.after }))} />
-            <p className="mt-3 text-xs text-slate-500">Riwayat maintenance, housekeeping, checklist, dan stok villa akan tampil di sini setelah modul terkait aktif.</p>
           </Card>
         </div>
 

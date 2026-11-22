@@ -11,11 +11,14 @@ export type NavItem = { href: string; label: string; icon: string; anyOf: Permis
 export const NAV: NavItem[] = [
   { href: "/dashboard", label: "Dashboard", icon: "▦", anyOf: ["dashboard.view"], group: "kerja" },
   { href: "/notifikasi", label: "Notifikasi", icon: "◔", anyOf: ["dashboard.view"], group: "kerja" },
+  { href: "/checklist", label: "Checklist Villa", icon: "✓", anyOf: ["checklist.submit", "checklist.view"], group: "kerja" },
+  { href: "/maintenance", label: "Maintenance", icon: "⚒", anyOf: ["maintenance.view", "maintenance.report"], group: "kerja" },
+  { href: "/housekeeping", label: "Housekeeping", icon: "✦", anyOf: ["housekeeping.view"], group: "kerja" },
   { href: "/properti", label: "Properti / Villa", icon: "⌂", anyOf: ["property.view"], group: "kerja" },
   { href: "/lokasi", label: "Lokasi", icon: "⌖", anyOf: ["property.view"], group: "kerja" },
   { href: "/karyawan", label: "Karyawan", icon: "☺", anyOf: ["employee.view"], group: "manajemen" },
   { href: "/audit", label: "Audit Trail", icon: "≣", anyOf: ["audit.view"], group: "manajemen" },
-  { href: "/pengaturan", label: "Pengaturan", icon: "⚙", anyOf: ["settings.manage", "rbac.manage", "department.manage", "import.run", "backup.run"], group: "admin" },
+  { href: "/pengaturan", label: "Pengaturan", icon: "⚙", anyOf: ["settings.manage", "rbac.manage", "department.manage", "import.run", "backup.run", "checklist.template_manage"], group: "admin" },
 ];
 
 export function navFor(actor: Actor) {

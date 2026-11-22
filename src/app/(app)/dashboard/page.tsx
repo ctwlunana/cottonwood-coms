@@ -10,6 +10,12 @@ import { PageHeader, Stat, Card, Empty, Badge } from "@/components/ui";
 import { PropertyStatusBadge } from "@/components/badges";
 import { fmtRelative, fmtDateTime } from "@/lib/format";
 import { lastSuccessfulBackup } from "@/services/backup";
+import { todayChecklistStatus } from "@/services/checklists";
+import { listWorkOrders, maintenanceStats } from "@/services/maintenance";
+import { listAssignments, dailySummary } from "@/services/housekeeping";
+import { todayJakarta } from "@/services/villa-relations";
+import { WoStatusBadge, HkStatusBadge, PriorityBadge } from "@/components/badges";
+import { HK_STATUS_LABEL } from "@/lib/labels";
 
 export const metadata = { title: "Dashboard" };
 
@@ -29,6 +35,16 @@ export default async function Dashboard() {
   ]);
   const backupStale = lastBackup === "never" || (lastBackup instanceof Date && Date.now() - lastBackup.getTime() > 7 * 86400_000);
   const wide = propScope === "all" || propScope === "department";
+  const woScope = scopeOf(actor, "maintenance.view");
+  const [checklistToday, myWos, villaWos, woStats, myCleaning, toInspect, hkToday] = await Promise.all([
+    can(actor, "checklist.submit") ? todayChecklistStatus(db, actor) : null,
+    can(actor, "maintenance.work") ? listWorkOrders(db, actor, { mine: true }) : null,
+    woScope === "assigned" ? listWorkOrders(db, actor, {}) : null,
+    woScope === "all" ? maintenanceStats(db, actor) : null,
+    can(actor, "housekeeping.work") ? listAssignments(db, actor, { mine: true, open: true }) : null,
+    can(actor, "housekeeping.view") && scopeOf(actor, "housekeeping.view") !== "own" ? listAssignments(db, actor, { status: "inspection_required" }) : null,
+    can(actor, "housekeeping.schedule") ? dailySummary(db, actor, todayJakarta()) : null,
+  ]);
   const total = stats ? Object.values(stats.byStatus).reduce((a, b) => a + b, 0) : 0;
 
   return (
@@ -51,7 +67,76 @@ export default async function Dashboard() {
         </div>
       )}
 
+      {(can(actor, "checklist.submit") || can(actor, "maintenance.report")) && (
+        <div className="mb-4 grid grid-cols-2 gap-2 sm:flex">
+          {can(actor, "checklist.submit") && <Link href="/checklist/baru" className="btn-primary py-3">✓ Isi checklist</Link>}
+          {can(actor, "maintenance.report") && <Link href="/maintenance/lapor" className="btn-secondary py-3">⚒ Lapor kerusakan</Link>}
+        </div>
+      )}
+
+      {woStats && (
+        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <Stat label="WO terbuka" value={woStats.open} href="/maintenance" />
+          <Stat label="WO kritis" value={woStats.critical} tone={woStats.critical ? "red" : "gray"} href="/maintenance?priority=critical" />
+          <Stat label="WO terlambat" value={woStats.overdue} tone={woStats.overdue ? "red" : "gray"} href="/maintenance?overdue=1" />
+          {can(actor, "maintenance.review") && <Stat label="Laporan perlu ditinjau" value={woStats.pendingRequests} tone={woStats.pendingRequests ? "yellow" : "gray"} href="/maintenance?tab=permintaan" />}
+          <Stat label="Perlu verifikasi" value={woStats.toVerify} tone={woStats.toVerify ? "blue" : "gray"} href="/maintenance?status=completed" />
+        </div>
+      )}
+      {hkToday && (
+        <div className="mb-4 grid grid-cols-2 gap-3 md:grid-cols-5">
+          <Stat label="Pembersihan hari ini" value={hkToday.list.filter((r) => r.a.status !== "cancelled").length} href="/housekeeping" />
+          <Stat label="Belum ada petugas" value={hkToday.byStatus.pending ?? 0} tone={hkToday.byStatus.pending ? "yellow" : "gray"} href="/housekeeping?status=pending" />
+          <Stat label={HK_STATUS_LABEL.inspection_required} value={hkToday.byStatus.inspection_required ?? 0} tone="blue" href="/housekeeping?status=inspection_required" />
+          <Stat label="Perlu ulang" value={(hkToday.byStatus.inspection_failed ?? 0) + (hkToday.byStatus.reclean_required ?? 0)} tone="red" href="/housekeeping?status=inspection_failed" />
+          <Stat label="Siap" value={hkToday.byStatus.ready ?? 0} tone="green" href="/housekeeping?status=ready" />
+        </div>
+      )}
+
       <div className="grid gap-4 lg:grid-cols-3">
+        {myCleaning && (
+          <Card title="Tugas pembersihan saya" className="lg:col-span-2">
+            {myCleaning.length === 0 ? <p className="text-sm text-slate-500">Tidak ada tugas aktif.</p> : (
+              <ul className="divide-y divide-slate-100">{myCleaning.map(({ a, villa }) => (
+                <li key={a.id}><Link href={`/housekeeping/${a.id}`} className="flex items-center justify-between gap-2 py-3"><span className="font-medium">{villa}<span className="block text-xs font-normal text-slate-500">target {fmtDateTime(a.expectedDoneAt)}</span></span><HkStatusBadge s={a.status} /></Link></li>
+              ))}</ul>
+            )}
+          </Card>
+        )}
+        {myWos && (
+          <Card title="Work order saya" className="lg:col-span-2" actions={<Link href="/maintenance?mine=1" className="link text-sm">Semua</Link>}>
+            {myWos.rows.length === 0 ? <p className="text-sm text-slate-500">Tidak ada work order aktif.</p> : (
+              <ul className="divide-y divide-slate-100">{myWos.rows.slice(0, 8).map(({ wo, villa }) => (
+                <li key={wo.id}><Link href={`/maintenance/${wo.id}`} className="flex items-center justify-between gap-2 py-3"><span className="min-w-0"><span className="block truncate font-medium">{wo.title}</span><span className="text-xs text-slate-500">{villa} · batas {fmtDateTime(wo.deadline)}</span></span><span className="flex gap-1"><PriorityBadge p={wo.priority} /><WoStatusBadge s={wo.status} /></span></Link></li>
+              ))}</ul>
+            )}
+          </Card>
+        )}
+        {checklistToday && checklistToday.length > 0 && (
+          <Card title="Checklist hari ini">
+            <ul className="divide-y divide-slate-100">{checklistToday.map((v) => (
+              <li key={v.id} className="flex items-center justify-between gap-2 py-2.5"><span className="truncate text-sm font-medium">{v.name}</span>
+                {v.doneAt ? <Badge tone={v.fails ? "red" : "green"}>{v.fails ? `${v.fails} masalah` : "Selesai"}</Badge> : <Link className="btn-primary px-3 py-1 text-xs" href={`/checklist/baru?villa=${v.id}`}>Isi</Link>}</li>
+            ))}</ul>
+          </Card>
+        )}
+        {villaWos && (
+          <Card title="Maintenance di villa saya" actions={<Link href="/maintenance" className="link text-sm">Semua</Link>}>
+            {villaWos.rows.length === 0 ? <p className="text-sm text-slate-500">Tidak ada work order terbuka.</p> : (
+              <ul className="space-y-2">{villaWos.rows.slice(0, 6).map(({ wo, villa }) => (
+                <li key={wo.id}><Link href={`/maintenance/${wo.id}`} className="block text-sm"><span className="font-medium">{wo.title}</span> <WoStatusBadge s={wo.status} />
+                  <span className="block text-xs text-slate-500">{villa}{wo.status === "verified" && " · menunggu konfirmasi Anda"}</span></Link></li>
+              ))}</ul>
+            )}
+          </Card>
+        )}
+        {toInspect && toInspect.length > 0 && (
+          <Card title="Menunggu inspeksi kesiapan">
+            <ul className="space-y-2">{toInspect.map(({ a, villa }) => (
+              <li key={a.id}><Link href={`/housekeeping/${a.id}`} className="block text-sm"><span className="font-medium">{villa}</span><span className="block text-xs text-slate-500">selesai dibersihkan {fmtDateTime(a.cleaningCompletedAt)}</span></Link></li>
+            ))}</ul>
+          </Card>
+        )}
         {myVillas && (
           <Card title="Villa yang ditugaskan kepada saya" className="lg:col-span-2">
             {myVillas.rows.length === 0 ? <Empty title="Belum ada villa yang ditugaskan" hint="Hubungi Supervisor Villa untuk penugasan." /> : (

@@ -16,7 +16,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "cron": "tsx scripts/cron.ts",
-    "test:e2e": "node tests/e2e/roles.e2e.mjs && node tests/e2e/lifecycle.e2e.mjs",
+    "test:e2e": "node tests/e2e/roles.e2e.mjs && node tests/e2e/lifecycle.e2e.mjs && node tests/e2e/backup.e2e.mjs && node tests/e2e/stage2.e2e.mjs",
     "backup": "echo \"Gunakan menu Pengaturan → Backup di aplikasi (atau scripts/backup.sh untuk server PostgreSQL sendiri)\"",
     "backup:restore": "tsx scripts/restore.ts",
     "cf:build": "opennextjs-cloudflare build",
