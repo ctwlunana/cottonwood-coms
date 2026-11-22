@@ -10,7 +10,7 @@ Target: *"Setiap karyawan login dengan hak akses berbeda."* — **met and tested
 | Database | 21 tables, 2 migrations, FKs/indexes/partial unique indexes, append-only audit trigger, CHECK constraints |
 | Authentication | Login/logout, bcrypt, hashed server-side sessions (idle 12 h configurable / absolute 7 d), DB-backed login rate limit (5/user, 20/IP per 15 min), generic error messages, forced password change for new accounts, change password (other sessions revoked), list/revoke own sessions |
 | Password reset | "Lupa password" → in-app notification to admins → single-use 2 h link issued by admin → reset revokes all sessions. No email needed. |
-| RBAC | 75-permission catalog covering all 6 stages, 17 default roles, multi-role users, scoped permissions (own / assigned / department / all), editable matrix UI, backend enforcement in every service |
+| RBAC | 71-permission catalog covering all 6 stages, 17 default roles, multi-role users, scoped permissions (own / assigned / department / all), editable matrix UI, backend enforcement in every service |
 | Control rules | Sysadmin has no financial authority and cannot grant it; financial roles/permissions only changeable by GM; nobody edits own roles or own role's permissions; approval threshold (Rp10.000.000, configurable) only changeable by GM |
 | Employees | List/search/filter, create (one-time temp password), edit, roles, activate/deactivate (kills sessions, ends assignments), reset link, account history |
 | Departments | CRUD (10 defaults) |

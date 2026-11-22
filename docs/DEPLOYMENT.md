@@ -1,6 +1,31 @@
 # Deployment, operations, backup & recovery
 
-## 1. Environment variables
+## 0. Production architecture (current)
+
+| Part | Service | Notes |
+|---|---|---|
+| App | **Cloudflare Workers** (Workers Paid, USD 5/month) via OpenNext | `wrangler.jsonc`, custom entry `worker.ts` (adds Cron Triggers) |
+| Database | **Supabase PostgreSQL**, project `COMS` (Singapore, free plan) | separate from the public-website project; app role `coms_app` owns all tables; RLS on, no Data-API grants |
+| DB connection | **Cloudflare Hyperdrive** → Supabase session pooler (port 5432) | binding `HYPERDRIVE` |
+| Files & nightly backups | **Cloudflare R2** bucket `coms-files` | binding `FILES`; `attachments/…` and `backups/…` |
+| Scheduler | Cron Triggers: `*/5 * * * *` (reminders, escalations, notifications), `0 19 * * *` = 02:00 WIB (backup to R2) | secret `CRON_SECRET` |
+| Domain | `ops.cottonwoodstays.com` (custom domain on the Worker) | requires the `cottonwoodstays.com` zone in Cloudflare |
+| Communication | in-app notifications only (no WhatsApp, no email) | |
+
+### First deployment checklist
+1. Cloudflare: upgrade to **Workers Paid**; create API token (Edit Cloudflare Workers template + Workers R2 Storage Edit + Hyperdrive Edit + Account Settings Read).
+2. `npx wrangler r2 bucket create coms-files`
+3. `npx wrangler hyperdrive create coms-db --connection-string="postgres://coms_app.<project-ref>:<password>@aws-<n>-ap-southeast-1.pooler.supabase.com:5432/postgres"` → put the returned id into `wrangler.jsonc` (`TODO_HYPERDRIVE_ID`).
+4. `openssl rand -base64 32 | npx wrangler secret put CRON_SECRET`
+5. `npm run cf:deploy` (builds with OpenNext and deploys). Until the domain is on Cloudflare, remove the `routes` entry and use the `*.workers.dev` URL; set `APP_URL` accordingly.
+6. Domain: add `cottonwoodstays.com` to Cloudflare (Free plan), check that the imported DNS records include the website (www) and **email MX/TXT records**, then change the nameservers at GoDaddy to the two Cloudflare nameservers. After activation, restore the `routes` custom domain `ops.cottonwoodstays.com` and redeploy.
+7. In Supabase → Project Settings → API, you may additionally disable the Data API (COMS never uses it).
+
+### Database migrations in production
+`DATABASE_URL=<Supabase session-pooler URL for coms_app> npm run db:migrate` (from any machine/CI with network access). `db:migrate` also re-applies `coms_lockdown()` so new tables get RLS and no API grants. Run `npm run db:seed` afterwards to add new permissions/roles of a release.
+
+
+## 1. Environment variables (Node / self-hosted alternative)
 
 | Variable | Required | Description |
 |---|---|---|
@@ -12,8 +37,8 @@
 | `UPLOAD_MAX_MB` | no | Per-file upload limit (default 10) |
 | `DB_POOL_MAX` | no | DB pool size (default 10) |
 | `BCRYPT_COST` | no | Password hash cost (default 12) |
-| `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASSWORD`, `SMTP_FROM` | no | Email channel. Empty ⇒ email deliveries logged as `skipped` |
-| `WHATSAPP_TOKEN`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_TEMPLATE`, `WHATSAPP_TEMPLATE_LANG` | no | WhatsApp Business Cloud API (requires an approved message template). Empty ⇒ `skipped`. **Adapter not verified against a live account.** |
+| `CRON_SECRET` | Workers | Shared secret between the Cron Trigger and `/api/cron` |
+| `STORAGE_DRIVER` | no | `r2` forces the R2 adapter (automatic on Workers) |
 | `BACKUP_DIR`, `BACKUP_KEEP_DAYS` | no | For `scripts/backup.sh` (defaults `./backups`, 30) |
 | `TEST_DATABASE_URL` | tests | Must contain "test"; it is wiped on every test run |
 | `DEMO_PASSWORD` | dev | Password for demo accounts |
@@ -74,6 +99,15 @@ cd /opt/coms && git pull && npm ci && npm run build && npm run db:migrate && npm
 `db:seed` adds new permissions/roles introduced by a release but never overwrites matrix customizations.
 
 ## 4. Backup & recovery
+
+**In the app (Manager ke atas / GM):** *Pengaturan → Backup data*
+* **Backup File — Database**: consistent snapshot of all tables, `.json.gz`, downloaded to your device.
+* **Backup File — Foto & Dokumen**: all uploaded files as `.tar` with `MANIFEST.json`.
+* Automatic nightly database backup to R2 (02:00 WIB, kept 30 days), downloadable from the same page.
+* Restore a database backup: create an empty database, `npm run db:migrate` (no seed), then `npm run backup:restore -- <file.json.gz>`. Files: `tar -xf` and upload the `files/` contents to R2 keeping the paths.
+* The dashboard warns the GM when the last successful backup is older than 7 days.
+
+### Self-hosted PostgreSQL (alternative)
 
 * `scripts/backup.sh` writes `coms-db-<stamp>.dump` (pg_dump custom format, verified with `pg_restore --list`) and `coms-uploads-<stamp>.tar.gz`, keeps 30 days.
 * **Copy backups off the server daily** (e.g. `rclone` to cloud storage). A backup on the same disk is not a backup.

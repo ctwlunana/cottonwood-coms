@@ -3,7 +3,7 @@
 Internal operations platform for Cottonwood Boutique Stays Indonesia (≈38 villas).
 UI in Bahasa Indonesia; code and technical docs in English.
 
-**Status: Stage 1 (Foundation) complete.** See [`docs/STAGE-1-REPORT.md`](docs/STAGE-1-REPORT.md).
+**Status: Stage 1 and Stage 2 complete.** See [`docs/STAGE-2-REPORT.md`](docs/STAGE-2-REPORT.md). Production: Cloudflare Workers + Supabase (see docs/DEPLOYMENT.md).
 
 | Doc | Content |
 |---|---|

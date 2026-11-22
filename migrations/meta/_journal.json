@@ -50,6 +50,13 @@
       "when": 1795360081097,
       "tag": "0006_stage2_constraints",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1795361317899,
+      "tag": "0007_function_search_path",
+      "breakpoints": true
     }
   ]
 }
