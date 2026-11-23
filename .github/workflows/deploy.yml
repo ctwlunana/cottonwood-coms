@@ -29,8 +29,8 @@ jobs:
       TEST_DATABASE_URL: postgres://coms:coms_dev@localhost:5432/coms_test
       DATABASE_URL: postgres://coms:coms_dev@localhost:5432/coms_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - run: npx tsc --noEmit
@@ -42,12 +42,19 @@ jobs:
     runs-on: ubuntu-latest
     environment: production
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22, cache: npm }
       - run: npm ci
       - name: Build (OpenNext) & deploy to Cloudflare Workers
         run: npx opennextjs-cloudflare build && npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: c447c5c61dbf1fc6274969ac154f1672
+      # Shared secret between the Cron Trigger and /api/cron. Only the Worker itself uses it, so a fresh
+      # random value per deploy is safe (both sides read the same binding at runtime).
+      - name: Rotate CRON_SECRET
+        run: openssl rand -base64 32 | tr -d '\n' | npx wrangler secret put CRON_SECRET
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: c447c5c61dbf1fc6274969ac154f1672
