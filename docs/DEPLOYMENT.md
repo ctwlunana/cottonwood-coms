@@ -12,7 +12,14 @@
 | Domain | `ops.cottonwoodstays.com` (custom domain on the Worker) | requires the `cottonwoodstays.com` zone in Cloudflare |
 | Communication | in-app notifications only (no WhatsApp, no email) | |
 
-### First deployment checklist
+### Current production (Nov 2026)
+* URL: **https://coms.ctwlunana.workers.dev** (temporary, until `cottonwoodstays.com` is moved to Cloudflare → `ops.cottonwoodstays.com`).
+* Code: GitHub `ctwlunana/cottonwood-coms` (private). **Every push to `main` runs typecheck + 57 tests against PostgreSQL, then deploys** (`.github/workflows/deploy.yml`). The deploy also sets a fresh `CRON_SECRET`.
+* Required GitHub secret: `CLOUDFLARE_API_TOKEN` (Cloudflare *Account API token* with Workers Scripts, Workers R2 Storage, Hyperdrive, Workers KV Storage: Edit, Account Settings: Read).
+* Cloudflare resources: Worker `coms`, R2 bucket `coms-files` (APAC), Hyperdrive `coms-db` (→ Supabase session pooler, role `coms_app`, query caching disabled).
+* Supabase project `COMS` (ap-southeast-1). The `coms_app` password exists only inside the Hyperdrive config; to rotate it: set a new password for `coms_app` in Supabase, then update Hyperdrive (`wrangler hyperdrive update <id> --origin-password ...`).
+
+### First deployment checklist (reference)
 1. Cloudflare: upgrade to **Workers Paid**; create API token (Edit Cloudflare Workers template + Workers R2 Storage Edit + Hyperdrive Edit + Account Settings Read).
 2. `npx wrangler r2 bucket create coms-files`
 3. `npx wrangler hyperdrive create coms-db --connection-string="postgres://coms_app.<project-ref>:<password>@aws-<n>-ap-southeast-1.pooler.supabase.com:5432/postgres"` → put the returned id into `wrangler.jsonc` (`TODO_HYPERDRIVE_ID`).
