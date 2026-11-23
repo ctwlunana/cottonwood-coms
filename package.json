@@ -17,10 +17,10 @@
     "test:watch": "vitest",
     "cron": "tsx scripts/cron.ts",
     "test:e2e": "node tests/e2e/roles.e2e.mjs && node tests/e2e/lifecycle.e2e.mjs && node tests/e2e/backup.e2e.mjs && node tests/e2e/stage2.e2e.mjs",
-    "backup": "echo \"Gunakan menu Pengaturan → Backup di aplikasi (atau scripts/backup.sh untuk server PostgreSQL sendiri)\"",
+    "backup": "echo \"Gunakan menu Pengaturan \u2192 Backup di aplikasi (atau scripts/backup.sh untuk server PostgreSQL sendiri)\"",
     "backup:restore": "tsx scripts/restore.ts",
     "cf:build": "opennextjs-cloudflare build",
-    "cf:preview": "opennextjs-cloudflare build && wrangler dev --port 8787 --test-scheduled",
+    "cf:preview": "opennextjs-cloudflare build && wrangler dev --port 8787 --ip 127.0.0.1 --local-upstream 127.0.0.1:8787 --test-scheduled",
     "cf:deploy": "opennextjs-cloudflare build && opennextjs-cloudflare deploy"
   },
   "dependencies": {
