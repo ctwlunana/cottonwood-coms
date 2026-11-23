@@ -20,6 +20,18 @@ async function as(username, viewport = { width: 1366, height: 900 }) {
 }
 const navLabels = async (page) => (await page.locator("aside nav a").allInnerTexts()).map((t) => t.split("\n").pop().replace(/\d+$/, "").trim());
 
+// --- Not logged in: every protected page and API sends you to login (no 500s)
+{
+  const ctx = await browser.newContext(); const page = await ctx.newPage();
+  for (const path of ["/", "/dashboard", "/properti", "/maintenance", "/pengaturan/backup"]) {
+    const res = await page.goto(`${BASE}${path}`);
+    check(new URL(page.url()).pathname === "/login" && res.status() === 200 && (await page.locator("#username").count()) === 1, `no session: ${path} → login page`);
+  }
+  const api = await page.request.get(`${BASE}/api/notifications/unread`);
+  check(api.status() === 401, `no session: API returns 401 (${api.status()})`);
+  await ctx.close();
+}
+
 // --- GM
 {
   const { ctx, page } = await as("demo.gm");

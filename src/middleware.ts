@@ -8,7 +8,11 @@ export function middleware(req: NextRequest) {
   if (PUBLIC.some((p) => pathname.startsWith(p))) return NextResponse.next();
   if (!req.cookies.get("coms_session")) {
     if (pathname.startsWith("/api/")) return NextResponse.json({ error: "unauthenticated" }, { status: 401 });
-    return new NextResponse(null, { status: 307, headers: { Location: "/login" } });
+    // Middleware redirects must be absolute URLs (a relative Location makes Next return 500).
+    const url = req.nextUrl.clone();
+    url.pathname = "/login";
+    url.search = "";
+    return NextResponse.redirect(url);
   }
   return NextResponse.next();
 }
