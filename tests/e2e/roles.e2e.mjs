@@ -104,6 +104,10 @@ const navLabels = async (page) => (await page.locator("aside nav a").allInnerTex
   await page.waitForSelector("form div[role=alert]");
   check((await page.locator("form div[role=alert]").innerText()).includes("salah"), "wrong password shows error");
   await page.screenshot({ path: `${OUT}/login-error.png` });
+  check((await page.inputValue("#username")) === "demo.gm", "username is kept after a failed login");
+  await page.fill("#password", PW);
+  await Promise.all([page.waitForURL(/dashboard/), page.click("button[type=submit]")]);
+  check(true, "correct password after a failed attempt logs in");
   await ctx.close();
 }
 await browser.close();

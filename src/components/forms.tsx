@@ -1,12 +1,16 @@
 "use client";
-import { useActionState, useEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, startTransition, useActionState, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { useFormStatus } from "react-dom";
 import type { ActionState } from "@/lib/action";
 
 type Action = (prev: ActionState, fd: FormData) => Promise<ActionState>;
 
+/** Pending state of the surrounding ActionForm (it submits manually, so useFormStatus alone can't see it). */
+const PendingContext = createContext(false);
+
 export function SubmitButton({ children, className = "btn-primary", pendingText = "Menyimpan…" }: { children: ReactNode; className?: string; pendingText?: string }) {
-  const { pending } = useFormStatus();
+  const { pending: formPending } = useFormStatus();
+  const pending = useContext(PendingContext) || formPending;
   return <button type="submit" className={className} disabled={pending} aria-busy={pending}>{pending ? pendingText : children}</button>;
 }
 
@@ -25,20 +29,30 @@ export function ActionForm({ action, children, className = "space-y-4", confirm,
   action: Action; children?: ReactNode; className?: string; confirm?: string; resetOnSuccess?: boolean;
   render?: (state: ActionState) => ReactNode;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const [state, formAction, isPending] = useActionState(action, null);
   const ref = useRef<HTMLFormElement>(null);
   useEffect(() => { if (state?.ok && resetOnSuccess) ref.current?.reset(); }, [state, resetOnSuccess]);
   return (
-    <form
-      ref={ref}
-      action={formAction}
-      className={className}
-      onSubmit={(e) => { if (confirm && !window.confirm(confirm)) e.preventDefault(); }}
-    >
-      <Alert state={state} />
-      {children}
-      {render?.(state)}
-    </form>
+    <PendingContext.Provider value={isPending}>
+      <form
+        ref={ref}
+        className={className}
+        // Submit manually instead of <form action>: React 19 resets uncontrolled fields after every
+        // action, which would wipe what the user typed when the server returns a validation error.
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (isPending) return;
+          if (confirm && !window.confirm(confirm)) return;
+          const submitter = (e.nativeEvent as SubmitEvent).submitter as HTMLElement | null;
+          const fd = new FormData(e.currentTarget, submitter);
+          startTransition(() => formAction(fd));
+        }}
+      >
+        <Alert state={state} />
+        {children}
+        {render?.(state)}
+      </form>
+    </PendingContext.Provider>
   );
 }
 
