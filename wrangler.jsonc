@@ -3,6 +3,7 @@
   // (see docs/DEPLOYMENT.md). Secrets (CRON_SECRET) are set with `wrangler secret put`.
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "coms",
+  "account_id": "c447c5c61dbf1fc6274969ac154f1672",
   "main": "worker.ts",
   "compatibility_date": "2026-11-01",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
@@ -13,7 +14,7 @@
   "hyperdrive": [
     {
       "binding": "HYPERDRIVE",
-      "id": "TODO_HYPERDRIVE_ID",
+      "id": "5aa27c6a00b64c20b3e2900b1d078881",
       "localConnectionString": "postgres://coms:coms_dev@localhost:5432/coms"
     }
   ],
@@ -23,10 +24,12 @@
     "crons": ["*/5 * * * *", "0 19 * * *"]
   },
   "vars": {
-    "APP_URL": "https://ops.cottonwoodstays.com",
+    "APP_URL": "https://coms.ctwlunana.workers.dev",
     "COOKIE_SECURE": "true",
     "UPLOAD_MAX_MB": "10",
     "BACKUP_KEEP_DAYS": "30"
   },
-  "routes": [{ "pattern": "ops.cottonwoodstays.com", "custom_domain": true }]
+  // Until cottonwoodstays.com is on Cloudflare the app runs on workers.dev. Then: set APP_URL to
+  // https://ops.cottonwoodstays.com and add: "routes": [{ "pattern": "ops.cottonwoodstays.com", "custom_domain": true }]
+  "workers_dev": true
 }
